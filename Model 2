@@ -2,8 +2,8 @@
 # This r script produces the data for model 2
 # and summarizes the predictions for 
 # question 2, "did the speaker believe 
-# that what he said was true?"
-
+# that what he said was true?".
+# Data avaiulable by request to the first author
 ####################################
 
 # Load packages
