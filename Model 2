@@ -82,5 +82,5 @@ mod_2 <- brm(
   control = list(adapt_delta = .99)
 )
 
-# Save model
-saveRDS(mod_2, here("Saved_Models", "mod_2_prop.rds"))
+# Save model 
+saveRDS(mod_2, here("LS_LAF", "SM", "Saved_Models", "mod_2_prop.rds"))
