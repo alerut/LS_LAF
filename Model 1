@@ -1,5 +1,5 @@
 ####################################
-# This Script produce the data for model 1 
+# This RScript produce the data for model 1 
 # and summarizes the predictions for 
 # question 1, "did the speaker lie?"
 
@@ -17,11 +17,11 @@ library(here)          # To find the data file
 
 
 
-# Load data --------------------------------------------------
+# Load data ----------------------------------------------------------------
 
 d <- read.csv(here("LS_LAF", "SM", "Datasets", "lying_gm_Q1.csv")) #This only loads Q1
 
-
+# Data wrangling ------------------------------------------------------------
 # Dataset reformat
 d$X <- NULL
 d$Subject_ID <- as.factor(d$Subject_ID)
@@ -36,6 +36,7 @@ d$Size_effect <- as.factor(d$Size_effect)
 d$Ethnicity <- as.factor(d$Ethnicity)
 d$Expertise <- as.factor(d$Expertise)
 
+#  Change design variable factors
 d %>% mutate(newID = case_when(
   Design == "FC(s-i+e-)"    ~"FC(baseline)",   
   Design ==  "IMD(s+i-e+)"  ~  "IP(baseline)",
@@ -92,8 +93,8 @@ d %>%
   #plot distribution with point interval
   stat_halfeye()
 
-# the actual model --------------------------------------------------------
-# fit model with multiple predictors
+# The actual model --------------------------------------------------------
+# Fit model with multiple predictors
 mod_1 <- brm(
   data = d,
   family = bernoulli(),
@@ -108,4 +109,5 @@ mod_1 <- brm(
   control = list(adapt_delta = .99)
 )
 
+# Save model 
 saveRDS(mod_1, here("LS_LAF", "SM", "Saved_Models", "mod_1_prop.rds"))
