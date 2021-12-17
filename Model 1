@@ -1,8 +1,8 @@
 ####################################
 # This R script produce the data for model 1 
 # and summarizes the predictions for 
-# question 1, "did the speaker lie?"
-
+# question 1, "did the speaker lie?".
+# Data avaiulable by request to the first author
 ####################################
 
 # Load packages
