@@ -1,1 +1,111 @@
+####################################
+# This Script produce the data for model 1 
+# and summarizes the predictions for 
+# question 1, "did the speaker lie?"
 
+####################################
+
+# Load packages
+library(tidyverse)      #data wrangling and visualization
+library(brms)           #run regression models
+library(tidybayes)      #wrangle and visualize posteriors
+library(modelr)         #preparing data for predictions
+library(MASS)           #for simulation only
+library(formattable)    #for table
+library(cowplot)       # To plot multiple graphs
+library(here)          # To find the data file
+
+
+
+# Load data --------------------------------------------------
+
+d <- read.csv(here("LS_LAF", "SM", "Datasets", "lying_gm_Q1.csv")) #This only loads Q1
+
+
+# Dataset reformat
+d$X <- NULL
+d$Subject_ID <- as.factor(d$Subject_ID)
+d$Year <- as.factor(d$Year)
+d$Sex <- as.factor(d$Sex)
+d$Vignette_ID <- as.factor(d$Vignette_ID)
+d$Question <- as.factor(d$Question)
+d$Response <- as.factor(d$Response)
+d$Adj_sub_ID <- as.factor(d$Adj_sub_ID)
+d$Prediction <- as.factor(d$Prediction)
+d$Size_effect <- as.factor(d$Size_effect)
+d$Ethnicity <- as.factor(d$Ethnicity)
+d$Expertise <- as.factor(d$Expertise)
+
+d %>% mutate(newID = case_when(
+  Design == "FC(s-i+e-)"    ~"FC(baseline)",   
+  Design ==  "IMD(s+i-e+)"  ~  "IP(baseline)",
+  Design ==  "FC(s-i+e+a)"  ~  "FC(fisher)",
+  Design ==  "IMD(s+i-e+i)" ~ "IP(imprecise)",
+  Design ==  "IMD(s-i-e+)"~  "IP(dentist)",
+  Design ==  "IMD(s+i-e+a)" ~"IP(precise)",
+  Design ==  "FC(s+i+e-)"  ~"FC(truck)",
+  Design ==  "FC(s-i+e-i)"~  "FC(imprecise)",
+  Design ==  "IMD(s+i+e+)"~  "IP(shaman)",
+  Design ==  "FC(s-i-e-)"  ~ "FC(outgroup)",
+  Design ==  "IMD(s+i+e-)"~  "IP(non-doctor)",
+  Design ==  "IP(price)"   ~ "IP(price)",
+  Design ==  "IP(rain)"    ~"IP(weather)",
+  Design ==  "FC(s+i-e+)" ~"FC(doctor)",
+  Design ==  "FC(s-i-e+)"  ~"FC(visit)",
+  Design ==  "IP(s-i-e-)"  ~"IP(engine)",
+  Design ==  "IMD(s-i+e-)"~  "IP(pain)",
+  Design ==  "IP(bridge)"  ~"IP(bridge)"
+)
+) -> d
+
+d$Design <- d$newID
+
+
+# Prior predictive check --------------------------------------------------
+# Mod for priors
+mod_1_prior <- brm(
+  data = d,
+  #use bernoulli, special of binomial where trials = 1, more efficient than binomial
+  family = bernoulli(),
+  Response ~ 1 + Prediction + Ethnicity + Expertise + Size_effect + Sex + 
+    (1 | Adj_sub_ID) + (1 | Design),
+  #here i use diffuse priors similar to defaults to show why can lead to bad predictions
+  prior = c(prior(student_t(40, 0, 0.5), class = Intercept),
+            prior(student_t(40, 0, 0.5), class = sd),
+            prior(student_t(40, 0, 0.5), class = b)),
+  #sampling only prior, so don't need large chains with lots of warmup
+  iter = 2000, warmup = 1000, chains = 1,
+  #set adapt_delta to make sure model convergences
+  #not necessary for prior only, but i always set this to default
+  control = list(adapt_delta = .99),
+  #and this makes sure to sample only from the prior
+  sample_prior = "only"
+)
+
+# Plot predictions from prior
+d %>%
+  #this function pulls out the posteriors from the model and computes the expected value using the appropriate link function
+  add_fitted_draws(mod_1_prior) %>%
+  #this created a tibble with a k rows per row in data, where k is number of samples from MCMC
+  #plot it out
+  ggplot(aes(x = .value)) +
+  #plot distribution with point interval
+  stat_halfeye()
+
+# the actual model --------------------------------------------------------
+# fit model with multiple predictors
+mod_1 <- brm(
+  data = d,
+  family = bernoulli(),
+  Response ~ 1 + Prediction + Ethnicity + Expertise + Size_effect + Sex + 
+    (1 | Adj_sub_ID) + (1 | Design),
+  prior = c(prior(student_t(40, 0, 0.5), class = Intercept),
+            prior(student_t(40, 0, 0.5), class = b),
+            prior(student_t(40, 0, 0.5), class = sd)),
+  iter = 7500, warmup = 5000, chains = 4,
+  cores = 4,
+  seed = 20210202, #for reproducibility
+  control = list(adapt_delta = .99)
+)
+
+saveRDS(mod_1, here("LS_LAF", "SM", "Saved_Models", "mod_1_prop.rds"))
