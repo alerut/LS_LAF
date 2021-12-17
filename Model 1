@@ -1,5 +1,5 @@
 ####################################
-# This RScript produce the data for model 1 
+# This R script produce the data for model 1 
 # and summarizes the predictions for 
 # question 1, "did the speaker lie?"
 
