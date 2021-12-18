@@ -12,8 +12,8 @@ library(tidybayes)      #wrangle and visualize posteriors
 library(modelr)         #preparing data for predictions
 library(MASS)           #for simulation only
 library(formattable)    #for table
-library(cowplot)       # To plot multiple graphs
-library(here)          # To find the data file
+library(cowplot)        #plot multiple graphs
+library(here)           #find the data file
 
 
 # Load data ----------------------------------------------------------------
