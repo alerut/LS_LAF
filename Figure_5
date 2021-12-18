@@ -1,0 +1,317 @@
+####################################
+# This Script produces Figure 5, and 
+# The correlation coefficients
+####################################
+
+# Load packages
+library(tidyverse)      # Data wrangling and visualization
+library(brms)           # Run regression models
+library(tidybayes)      # Wrangle and visualize posteriors
+library(cowplot)        # To plot multiple graphs
+library(here)           # To find the data file
+library(ggrepel)        # For labels 
+
+
+# Read in filers data and data warangling ---------------------------------
+d <- read.csv(here("LS_LAF", "SM", "Datasets", "lying_gm_Q1.csv"))
+
+d %>% rename(
+    lie = Response, 
+    "Speech Act" = Prediction
+) %>% mutate(newID = case_when(
+  Design == "FC(s-i+e-)"    ~"FC(baseline)",   
+  Design ==  "IMD(s+i-e+)"  ~  "IP(baseline)",
+  Design ==  "FC(s-i+e+a)"  ~  "FC(fisher)",
+  Design ==  "IMD(s+i-e+i)" ~ "IP(imprecise)",
+  Design ==  "IMD(s-i-e+)"~  "IP(dentist)",
+  Design ==  "IMD(s+i-e+a)" ~"IP(precise)",
+  Design ==  "FC(s+i+e-)"  ~"FC(truck)",
+  Design ==  "FC(s-i+e-i)"~  "FC(imprecise)",
+  Design ==  "IMD(s+i+e+)"~  "IP(shaman)",
+  Design ==  "FC(s-i-e-)"  ~ "FC(outgroup)",
+  Design ==  "IMD(s+i+e-)"~  "IP(non-doctor)",
+  Design ==  "IP(price)"   ~ "IP(price)",
+  Design ==  "IP(rain)"    ~"IP(weather)",
+  Design ==  "FC(s+i-e+)" ~"FC(doctor)",
+  Design ==  "FC(s-i-e+)"  ~"FC(visit)",
+  Design ==  "IP(s-i-e-)"  ~"IP(engine)",
+  Design ==  "IMD(s-i+e-)"~  "IP(pain)",
+  Design ==  "IP(bridge)"  ~"IP(bridge)"
+  )
+) -> d
+
+d$Design <- d$newID
+
+
+d_q2 <- read.csv(here("LS_LAF", "SM", "Datasets", "lying_gm_Q2.csv"))
+
+d_q2 %>%
+  rename(
+    belief = Response,
+    "Speech Act" = Prediction
+  ) %>% mutate(newID = case_when(
+    Design ==  "FC(s-i+e+a)"  ~  "FC(fisher)",
+    Design ==  "IMD(s+i-e+i)" ~ "IP(imprecise)",
+    Design ==  "IMD(s-i-e+)"~  "IP(dentist)",
+    Design ==  "IMD(s+i-e+a)" ~"IP(precise)",
+    Design ==  "FC(s+i+e-)"  ~"FC(truck)",
+    Design ==  "FC(s-i+e-i)"~  "FC(imprecise)",
+    Design ==  "IMD(s+i+e+)"~  "IP(shaman)",
+    Design ==  "FC(s-i-e-)"  ~ "FC(outgroup)",
+    Design ==  "IMD(s+i+e-)"~  "IP(non-doctor)",
+    Design ==  "IP(price)"   ~ "IP(price)",
+    Design ==  "IP(rain)"    ~"IP(weather)",
+    Design ==  "FC(s+i-e+)" ~"FC(doctor)",
+    Design ==  "FC(s-i-e+)"  ~"FC(visit)",
+    Design ==  "IP(s-i-e-)"  ~"IP(engine)",
+    Design ==  "IMD(s-i+e-)"~  "IP(pain)",
+    Design ==  "IP(bridge)"  ~"IP(bridge)"
+    )
+  ) -> d_q2
+d_q2$Design <- d_q2$newID
+
+d_q3 <- read.csv(here("LS_LAF", "SM", "Datasets", "lying_gm_Q3.csv"))
+d_q3 %>%
+  rename(
+    intent = Response, 
+    "Speech Act" = Prediction
+  ) %>% mutate(newID = case_when(
+    Design ==  "FC(s-i+e+a)"  ~  "FC(fisher)",
+    Design ==  "IMD(s+i-e+i)" ~ "IP(imprecise)",
+    Design ==  "IMD(s-i-e+)"~  "IP(dentist)",
+    Design ==  "IMD(s+i-e+a)" ~"IP(precise)",
+    Design ==  "FC(s+i+e-)"  ~"FC(truck)",
+    Design ==  "FC(s-i+e-i)"~  "FC(imprecise)",
+    Design ==  "IMD(s+i+e+)"~  "IP(shaman)",
+    Design ==  "FC(s-i-e-)"  ~ "FC(outgroup)",
+    Design ==  "IMD(s+i+e-)"~  "IP(non-doctor)",
+    Design ==  "IP(price)"   ~ "IP(price)",
+    Design ==  "IP(rain)"    ~"IP(weather)",
+    Design ==  "FC(s+i-e+)" ~"FC(doctor)",
+    Design ==  "FC(s-i-e+)"  ~"FC(visit)",
+    Design ==  "IP(s-i-e-)"  ~"IP(engine)",
+    Design ==  "IMD(s-i+e-)"~  "IP(pain)",
+    Design ==  "IP(bridge)"  ~"IP(bridge)"
+    )
+  )  -> d_q3
+d_q3$Design <- d_q3$newID
+
+# Merge files together, selecting only response, id, and design for each dataframe
+d %>%
+  select(Adj_sub_ID, Design, `Speech Act`, lie,) %>%
+  merge(
+    d_q2 %>% select(Adj_sub_ID, Design, belief),
+    by = c("Adj_sub_ID", "Design"),
+    all.x = TRUE
+  ) %>%
+  merge(
+    d_q3 %>% select(Adj_sub_ID, Design, intent),
+    by = c("Adj_sub_ID", "Design"),
+    all.x = TRUE
+  ) %>%
+  filter(
+    Design != "FC(baseline)" & Design != "IP(baseline)"
+  ) ->
+  d
+
+
+# Run model -----------------------------------------------
+brm(
+  data = d,
+  family = bernoulli(),
+  #this fits three separate models predicting each response as a function of random intercepts
+  formula = bf(lie ~ 1 + (1 | Adj_sub_ID) + (1 | Design)) +
+    bf(belief ~ 1 + (1 | Adj_sub_ID) + (1 | Design))+
+    bf(intent ~ 1 + (1 | Adj_sub_ID) + (1 | Design)),
+  cores = 4, chains = 4, iter = 7500, warmup = 5000
+) ->
+  mod
+
+summary(mod)
+
+d %>% 
+  select(Design, `Speech Act`) %>%
+  unique() %>%
+  add_fitted_draws(mod,
+                   re_formula = ~ (1 | Design)) ->
+  d_fit
+
+
+
+# Estimates a regression of lie ~ belief for 500 draws on posterior
+d %>% 
+  select(Design, `Speech Act`) %>%
+  unique() %>%
+  add_fitted_draws(mod, n = 500, seed = 20210202,
+                   re_formula = ~ (1 | Design)) %>%
+  group_by(.draw) %>%
+  pivot_wider(
+    names_from = .category,
+    values_from = .value
+  ) %>% 
+  summarise(
+    a = lm(lie ~ belief)$coef[1], 
+    b = lm(lie ~ belief)$coef[2]
+  ) ->
+  d_belief_line
+
+# Estimate a line from coefficients for each draw
+data.frame(
+  x = rep(seq(from = .5, to = 1, length.out = 30), times = 500),
+  a = rep(d_belief_line$a, each = 30),
+  b = rep(d_belief_line$b, each = 30),
+  .draw = rep(d_belief_line$.draw, each = 30)
+) %>% mutate(
+  y = a + b * x
+) ->
+  d_belief_line
+
+# Plot --------------------------------------------------
+
+# Palette for UCLA colors
+ucla_palette <- c("#2774AE", "#FFD100")
+
+# Get posterior fit
+d_fit %>%
+  group_by(Design, `Speech Act`, .category) %>%
+  # Compute median and 67% HDI for each lie, belief, and intent
+  summarise(
+    median_hdci(.value, .width = .67)
+  ) %>% 
+  pivot_wider(
+    names_from = .category,
+    values_from = c(y, ymin, ymax)
+  ) %>% 
+  ggplot(aes(y = y_lie, ymin = ymin_lie, ymax = ymax_lie,
+             x = y_belief, xmin = ymin_belief, xmax = ymax_belief)) +
+  # Add line for regression from each draw
+  geom_line(data = d_belief_line, aes(x = x, y = y, group = .draw), inherit.aes = FALSE,
+            alpha = .02, color  = "darkgreen") +
+  #plot point intervals representing median and hdi each direction of each variable
+  geom_pointinterval(aes(color = as.factor(`Speech Act`)), alpha = .5) +
+  geom_pointintervalh(aes(color = as.factor(`Speech Act`)), alpha = .5)+
+  geom_label_repel(aes(label = Design),
+                   size = 3,
+                   box.padding   = 0.35, 
+                   point.padding = 0.5,
+                   segment.color = 'grey50') +
+  # Remove legend; going to plot next to intent and don't need it on both
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_x_continuous(limits = c(.5, 1)) +
+  scale_color_manual(values = c(ucla_palette[1], ucla_palette[2]),
+                     label = c("0" = "Commitment",
+                               "1" = "Predicion")) +
+  labs(x = "Probability of responding yes to 'belief-in-p'",
+       y = "Probability of responding yes to 'lie'",
+       color = "Speech Act") ->
+  belief_plot
+
+
+
+# Intent
+d %>% 
+  select(Design, `Speech Act`) %>%
+  unique() %>%
+  add_fitted_draws(mod, n = 500, seed = 20210202,
+                   re_formula = ~ (1 | Design)) %>%
+  group_by(.draw) %>%
+  pivot_wider(
+    names_from = .category,
+    values_from = .value
+  ) %>% 
+  summarise(
+    a = lm(lie ~ intent)$coef[1], 
+    b = lm(lie ~ intent)$coef[2]
+  ) ->
+  d_intent_line
+
+data.frame(
+  x = rep(seq(from = 0, to = 1, length.out = 30), times = 500),
+  a = rep(d_intent_line$a, each = 30),
+  b = rep(d_intent_line$b, each = 30),
+  .draw = rep(d_intent_line$.draw, each = 30)
+) %>% mutate(
+  y = a + b * x
+) ->
+  d_intent_line
+
+d_fit %>%
+  group_by(Design, `Speech Act`, .category) %>%
+  summarise(
+    median_hdci(.value, .width = .67)
+  ) %>% 
+  pivot_wider(
+    names_from = .category,
+    values_from = c(y, ymin, ymax)
+  ) %>% 
+  ggplot(aes(y = y_lie, ymin = ymin_lie, ymax = ymax_lie,
+             x = y_intent, xmin = ymin_intent, xmax = ymax_intent)) +
+  geom_line(data = d_intent_line, aes(x = x, y = y, group = .draw), inherit.aes = FALSE,
+            alpha = .02, color  = "darkgreen") +
+  geom_pointinterval(aes(color =  as.factor(`Speech Act`)), alpha = .5) +
+  geom_pointintervalh(aes(color = as.factor(`Speech Act`)), alpha = .5) +
+  geom_label_repel(aes(label = Design),
+                   size = 3,
+                   box.padding   = 0.35, 
+                   point.padding = 0.5,
+                   segment.color = 'grey50') +
+  theme_bw() + theme(legend.position = c(.875,.5)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_color_manual(values = c(ucla_palette[1], ucla_palette[2]),
+                     label = c("0" = "Commitment",
+                               "1" = "Prediction")) +
+  labs(x = "Probability of responding yes to 'intent'",
+       y = NULL,
+       color = "Speech Act") ->
+  intent_plot
+
+
+# Plot Multiple graphs 
+ggdraw() +
+  draw_plot(belief_plot, x = 0, y = 0, width = 0.5, height = 0.99) + 
+  draw_plot(intent_plot, x = 0.5, y = 0, width = 0.5, height = 0.99) +
+  draw_plot_label(label = c("A", "B"), size = 15,
+                  x = c(0.01, 0.5), y = c(1, 1)) -> g; g
+
+
+
+# Correlations --------------------------------------------------
+# Get correlation (lie vs belief)
+d %>% 
+  select(Design, `Speech Act`) %>%
+  unique() %>%
+  add_fitted_draws(mod, re_formula = ~ (1 | Design)) %>%
+  group_by(.draw) %>%
+  pivot_wider(
+    names_from = .category,
+    values_from = .value
+  ) %>% 
+  summarise(
+    r = cor(lie, belief)
+  ) %>%
+  summarise(median_hdci(r))
+
+
+# Get correlation (lie vs intent)
+d %>% 
+  select(Design, `Speech Act`) %>%
+  unique() %>%
+  add_fitted_draws(mod, re_formula = ~ (1 | Design)) %>%
+  group_by(.draw) %>%
+  pivot_wider(
+    names_from = .category,
+    values_from = .value
+  ) %>% 
+  summarise(
+    r = cor(lie, intent)
+  ) %>%
+  summarise(median_hdci(r))
+
+
+
+
+
+
+
