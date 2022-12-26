@@ -3,7 +3,7 @@
 # and summarizes the predictions for 
 # question 2, "did the speaker believe 
 # that what he said was true?".
-# Data avaiulable by request to the first author
+# Data available by request to the first author
 ####################################
 
 # Load packages
@@ -18,9 +18,11 @@ library(here)           #find the data file
 
 
 # load data ----------------------------------------------------------------
+
 d <- read.csv(here("Datasets", "lying_gm_Q2.csv")) #This only loads Q2
 
 # Data Wrangling ------------------------------------------------------------
+
 # Dataset reformat
 d$X <- NULL
 d$Subject_ID <- as.factor(d$Subject_ID)
@@ -36,7 +38,8 @@ d$Ethnicity <- as.factor(d$Ethnicity)
 d$Expertise <- as.factor(d$Expertise)
 
 # Prior predictive check --------------------------------------------------
-# Mod for priors
+
+# Model for priors
 mod_2_prior <- brm(
   data = d,
   #use bernoulli, special of binomial where trials = 1, more efficient than binomial
@@ -66,8 +69,9 @@ d %>%
   #plot distribution with point interval
   stat_halfeye()
 
-# the actual model --------------------------------------------------------
-# fit model with multiple predictors
+# The actual model --------------------------------------------------------
+
+# Fit model with multiple predictors
 mod_2 <- brm(
   data = d,
   family = bernoulli(),
