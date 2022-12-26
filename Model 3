@@ -2,7 +2,7 @@
 # This Script produce the data for model 3
 # and summarizes the predictions for 
 # question 1, "did the speaker have the intention to lie?"
-# Data avaiulable by request to the first author
+# Data available by request to the first author
 ####################################
 
 # Load packages
@@ -21,6 +21,7 @@ library(here)           #find the data file
 d <- read.csv(here("Datasets", "lying_gm_Q3.csv")) #This only loads Q3
 
 # Data wrangling ------------------------------------------------------------
+
 # Dataset reformat
 d$X <- NULL
 d$Subject_ID <- as.factor(d$Subject_ID)
@@ -37,7 +38,8 @@ d$Expertise <- as.factor(d$Expertise)
 
 
 # Prior predictive check --------------------------------------------------
-# Mod for priors
+
+# Model for priors
 mod_3_prior <- brm(
   data = d,
   #use bernoulli, special of binomial where trials = 1, more efficient than binomial
@@ -67,8 +69,9 @@ d %>%
   #plot distribution with point interval
   stat_halfeye()
 
-# the actual model --------------------------------------------------------
-# fit model with multiple predictors
+# The actual model --------------------------------------------------------
+
+# Fit model with multiple predictors
 mod_3 <- brm(
   data = d,
   family = bernoulli(),
