@@ -1,6 +1,7 @@
 ####################################
 # This Script produces Figure 5, and 
 # The correlation coefficients
+# Data available by request to the first author
 ####################################
 
 # Load packages
@@ -12,7 +13,8 @@ library(here)           # To find the data file
 library(ggrepel)        # For labels 
 
 
-# Read in filers data and data warangling ---------------------------------
+# Read in filers data and data wrangling ---------------------------------
+
 d <- read.csv(here("LS_LAF", "SM", "Datasets", "lying_gm_Q1.csv"))
 
 d %>% rename(
@@ -93,7 +95,8 @@ d_q3 %>%
     Design ==  "IMD(s-i+e-)"~  "IP(pain)",
     Design ==  "IP(bridge)"  ~"IP(bridge)"
     )
-  )  -> d_q3
+  )  -> d_q3'
+
 d_q3$Design <- d_q3$newID
 
 # Merge files together, selecting only response, id, and design for each dataframe
@@ -166,7 +169,7 @@ data.frame(
 ) ->
   d_belief_line
 
-# Plot --------------------------------------------------
+# Plot ------------------------------------------------------
 
 # Palette for UCLA colors
 ucla_palette <- c("#2774AE", "#FFD100")
@@ -278,6 +281,7 @@ ggdraw() +
 
 
 # Correlations --------------------------------------------------
+
 # Get correlation (lie vs belief)
 d %>% 
   select(Design, `Speech Act`) %>%
@@ -308,10 +312,4 @@ d %>%
     r = cor(lie, intent)
   ) %>%
   summarise(median_hdci(r))
-
-
-
-
-
-
 
